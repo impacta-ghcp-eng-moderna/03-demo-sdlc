@@ -1,0 +1,45 @@
+name: Preparar cenário da aula
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: preparar-cenario-${{ github.repository }}
+
+jobs:
+  create-scenario-issue:
+    name: Criar issue do cenário
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.1
+
+      - name: Criar issue quando necessário
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_TITLE: Limitar a duração dos treinamentos
+        run: |
+          existing_issues="$(
+            gh api --paginate \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "/repos/${GITHUB_REPOSITORY}/issues?state=all&per_page=100" \
+              --jq ".[] | select(.pull_request == null and .title == \"${ISSUE_TITLE}\") | .number"
+          )"
+          existing_issue="${existing_issues%%$'\n'*}"
+
+          if [ -n "$existing_issue" ]; then
+            echo "O cenário já existe na issue #${existing_issue}."
+            exit 0
+          fi
+
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$ISSUE_TITLE" \
+            --body-file .github/demo/issue-limitar-duracao.md
