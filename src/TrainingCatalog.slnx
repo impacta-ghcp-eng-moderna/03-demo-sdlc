@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/Api/">
+    <Project Path="Api/TrainingCatalog.Api.csproj" />
+  </Folder>
+  <Folder Name="/Application/">
+    <Project Path="Application/TrainingCatalog.Application.csproj" />
+  </Folder>
+  <Folder Name="/Client/">
+    <Project Path="Client/TrainingCatalog.Client.csproj" />
+  </Folder>
+  <Folder Name="/Infrastructure/">
+    <Project Path="Infrastructure/TrainingCatalog.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Tests/" />
+  <Folder Name="/Tests/Api.Tests/">
+    <Project Path="Tests/Api.Tests/TrainingCatalog.Api.Tests.csproj" />
+  </Folder>
+</Solution>

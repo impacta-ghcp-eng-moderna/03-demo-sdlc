@@ -1,0 +1,38 @@
+name: Passo 2 - apos preparacao
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  actions: write
+  contents: read
+  issues: write
+
+env:
+  STEP_TRIGGER_PHRASE: preparado
+
+jobs:
+  progress_lab:
+    if: >-
+      ${{ !github.event.repository.is_template
+      && !github.event.issue.pull_request
+      && contains(github.event.issue.title, 'Lab: ') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Avançar lab
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bash .github/scripts/progress-step.sh \
+            "${{ github.repository }}" \
+            "${{ github.event.issue.number }}" \
+            "${{ github.event.comment.body }}" \
+            "${{ env.STEP_TRIGGER_PHRASE }}" \
+            "${{ github.workflow }}" \
+            "03-revisar-criterios.yml" \
+            ".github/steps/02-configurar-delegacao.md" \
+            "A linha de base e os arquivos relevantes foram localizados. Agora você configurará uma fronteira explícita entre pesquisa de evidências e julgamento, usando o menor conjunto de capacidades necessário." \
+            "Para avançar, conclua a preparação e comente \`${{ env.STEP_TRIGGER_PHRASE }}\`." \
+            "next"

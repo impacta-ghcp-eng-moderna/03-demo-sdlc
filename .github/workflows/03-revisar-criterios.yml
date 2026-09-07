@@ -1,0 +1,38 @@
+name: Passo 3 - apos configuracao
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  actions: write
+  contents: read
+  issues: write
+
+env:
+  STEP_TRIGGER_PHRASE: configurado
+
+jobs:
+  progress_lab:
+    if: >-
+      ${{ !github.event.repository.is_template
+      && !github.event.issue.pull_request
+      && contains(github.event.issue.title, 'Lab: ') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Avançar lab
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bash .github/scripts/progress-step.sh \
+            "${{ github.repository }}" \
+            "${{ github.event.issue.number }}" \
+            "${{ github.event.comment.body }}" \
+            "${{ env.STEP_TRIGGER_PHRASE }}" \
+            "${{ github.workflow }}" \
+            "04-corrigir-comprovar.yml" \
+            ".github/steps/03-revisar-criterios.md" \
+            "O pesquisador está restrito a fatos e o revisor mantém o julgamento final, com delegação limitada a um único subagente. O handoff também preserva uma decisão humana antes de qualquer correção." \
+            "Para avançar, confira os agentes e o handoff e comente \`${{ env.STEP_TRIGGER_PHRASE }}\`." \
+            "next"

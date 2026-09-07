@@ -1,0 +1,108 @@
+name: Iniciar lab
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  actions: write
+  contents: write
+  issues: write
+
+jobs:
+  initialize_steps:
+    name: Inicializar sequência de passos
+    if: ${{ !github.event.repository.is_template }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Desabilitar passos de progressão
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow disable "02-configurar-delegacao.yml" --repo "${{ github.repository }}"
+          gh workflow disable "03-revisar-criterios.yml" --repo "${{ github.repository }}"
+          gh workflow disable "04-corrigir-comprovar.yml" --repo "${{ github.repository }}"
+          gh workflow disable "05-encerramento.yml" --repo "${{ github.repository }}"
+
+  start_lab:
+    name: Iniciar lab
+    needs: [initialize_steps]
+    if: ${{ !github.event.repository.is_template }}
+    uses: impacta-ghcp-eng-moderna/exercise-toolkit/.github/workflows/start-exercise.yml@main
+    with:
+      exercise-title: "Módulo 2 — Lab de custom agents, subagents e handoffs"
+      issue-title-prefix: "Lab: "
+      intro-message: "Neste lab, você configurará uma revisão delegada com menor privilégio e usará um handoff supervisionado para tratar uma conclusão sem evidência suficiente."
+
+  validate_start_branch:
+    name: Validar branch de início
+    needs: [start_lab]
+    if: ${{ !github.event.repository.is_template }}
+    runs-on: ubuntu-latest
+    outputs:
+      branch_available: ${{ steps.check.outputs.branch_available }}
+    steps:
+      - name: Verificar branch inicio
+        id: check
+        uses: actions/github-script@v9
+        with:
+          script: |
+            try {
+              await github.rest.repos.getBranch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                branch: "inicio"
+              });
+              core.setOutput("branch_available", "true");
+            } catch (error) {
+              core.setOutput("branch_available", "false");
+              core.warning("A branch inicio não foi encontrada.");
+            }
+
+  post_missing_branch:
+    name: Informar branch ausente
+    needs: [start_lab, validate_start_branch]
+    if: ${{ !github.event.repository.is_template && needs.validate_start_branch.outputs.branch_available != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publicar bloqueio
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ needs.start_lab.outputs.issue-number }}
+          ISSUE_REPOSITORY: ${{ github.repository }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "$ISSUE_REPOSITORY" --body "
+          > [!WARNING]
+          > O lab foi bloqueado porque a branch \`inicio\` não foi copiada.
+          >
+          > Exclua esta cópia e crie outra marcando **Include all branches**.
+          "
+
+  post_first_step:
+    name: Publicar primeiro passo
+    needs: [start_lab, validate_start_branch]
+    if: ${{ !github.event.repository.is_template && needs.validate_start_branch.outputs.branch_available == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Publicar primeiro passo
+        uses: GrantBirki/comment@v2.1.1
+        with:
+          issue-number: ${{ needs.start_lab.outputs.issue-number }}
+          file: .github/steps/01-preparar-revisao.md
+          vars: |
+            repository: ${{ github.repository }}
+
+      - name: Habilitar próximo passo
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow enable "02-configurar-delegacao.yml" --repo "${{ github.repository }}"
+
+      - name: Informar acompanhamento
+        uses: GrantBirki/comment@v2.1.1
+        with:
+          issue-number: ${{ needs.start_lab.outputs.issue-number }}
+          body: "Siga o passo acima e use a palavra indicada somente depois de conferir o resultado. Cada comentário seguinte explicará o que foi concluído antes de apresentar a próxima etapa."

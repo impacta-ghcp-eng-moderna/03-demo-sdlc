@@ -1,0 +1,42 @@
+.catalog-page {
+    padding-bottom: 3rem;
+    padding-top: 3rem;
+}
+
+.catalog-header {
+    margin-bottom: 2rem;
+}
+
+.form-panel,
+.list-panel {
+    height: 100%;
+}
+
+.section-heading {
+    margin-bottom: 1rem;
+}
+
+.list-state {
+    margin-top: 2rem;
+}
+
+.training-list {
+    padding-top: 0.5rem;
+}
+
+.training-item {
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+    padding-bottom: 1rem;
+    padding-top: 1rem;
+}
+
+.training-item:last-child {
+    border-bottom: 0;
+}
+
+.training-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.75rem;
+}

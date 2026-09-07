@@ -1,0 +1,39 @@
+name: Passo 5 - encerramento
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  actions: write
+  contents: read
+  issues: write
+
+env:
+  STEP_TRIGGER_PHRASE: comprovado
+
+jobs:
+  finish_lab:
+    if: >-
+      ${{ !github.event.repository.is_template
+      && !github.event.issue.pull_request
+      && contains(github.event.issue.title, 'Lab: ') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Encerrar lab
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bash .github/scripts/progress-step.sh \
+            "${{ github.repository }}" \
+            "${{ github.event.issue.number }}" \
+            "${{ github.event.comment.body }}" \
+            "${{ env.STEP_TRIGGER_PHRASE }}" \
+            "${{ github.workflow }}" \
+            "" \
+            "" \
+            "A conclusão selecionada e confirmada no diálogo foi tratada com uma alteração delimitada e relacionada ao critério original. A revisão humana da proposta, do diff e do teste focado completa o fluxo supervisionado." \
+            "Para encerrar, revise o diff, execute o teste focado e comente \`${{ env.STEP_TRIGGER_PHRASE }}\`." \
+            "final" \
+            ".github/steps/05-encerramento.md"

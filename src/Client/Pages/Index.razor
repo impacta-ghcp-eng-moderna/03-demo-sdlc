@@ -1,0 +1,248 @@
+@page "/"
+@using System.Text.Json
+@using TrainingCatalog.Application
+@inject HttpClient Http
+
+<PageTitle>Catálogo de treinamentos</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="catalog-page">
+    <MudStack Spacing="1" Class="catalog-header">
+        <MudText Typo="Typo.overline" Color="Color.Primary">Catálogo interno</MudText>
+        <MudText Typo="Typo.h2" GutterBottom="true">Novo treinamento</MudText>
+        <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            Cadastre uma nova oportunidade de aprendizagem para a equipe.
+        </MudText>
+    </MudStack>
+
+    <MudGrid Spacing="4">
+        <MudItem xs="12" md="5">
+            <MudPaper Class="form-panel pa-5" Elevation="2">
+                <MudText Typo="Typo.h5" GutterBottom="true">Dados do treinamento</MudText>
+                <MudForm @ref="form">
+                    <MudStack Spacing="2">
+                        <MudTextField @bind-Value="title" Label="Título" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" RequiredError="O título é obrigatório." Error='@HasFieldError("title")' ErrorText='@GetFieldError("title")' Disabled="@isSubmitting" />
+                        <MudTextField @bind-Value="description" Label="Descrição" Variant="Variant.Outlined" Margin="Margin.Dense" Lines="5" Required="true" RequiredError="A descrição é obrigatória." Error='@HasFieldError("description")' ErrorText='@GetFieldError("description")' Disabled="@isSubmitting" />
+
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12" sm="7">
+                                <MudDatePicker @bind-Date="startDate" Label="Data de início" DateFormat="dd/MM/yyyy" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" RequiredError="A data de início é obrigatória." Error='@HasFieldError("startDate")' ErrorText='@GetFieldError("startDate")' Disabled="@isSubmitting" />
+                            </MudItem>
+                            <MudItem xs="12" sm="5">
+                                <MudNumericField @bind-Value="durationHours" Label="Carga horária" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1" Required="true" RequiredError="A carga horária deve ser maior que zero." Error='@HasFieldError("durationHours")' ErrorText='@GetFieldError("durationHours")' Disabled="@isSubmitting" />
+                            </MudItem>
+                        </MudGrid>
+
+                        @if (!string.IsNullOrWhiteSpace(errorMessage))
+                        {
+                            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">@errorMessage</MudAlert>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(successMessage))
+                        {
+                            <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Dense="true">@successMessage</MudAlert>
+                        }
+
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Disabled="@isSubmitting" OnClick="SubmitAsync">
+                            @if (isSubmitting)
+                            {
+                                <MudProgressCircular Class="me-2" Size="Size.Small" Indeterminate="true" />
+                                <span>Cadastrando...</span>
+                            }
+                            else
+                            {
+                                <span>Cadastrar treinamento</span>
+                            }
+                        </MudButton>
+                    </MudStack>
+                </MudForm>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="7">
+            <MudPaper Class="list-panel pa-5" Elevation="2">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start" Class="section-heading">
+                    <div>
+                        <MudText Typo="Typo.overline" Color="Color.Primary">Visão geral</MudText>
+                        <MudText Typo="Typo.h5">Treinamentos cadastrados</MudText>
+                    </div>
+                    <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined">@trainings.Count.ToString()</MudChip>
+                </MudStack>
+
+                @if (isLoading)
+                {
+                    <MudStack AlignItems="AlignItems.Center" Class="list-state" Spacing="2">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        <MudText Color="Color.Secondary">Carregando treinamentos...</MudText>
+                    </MudStack>
+                }
+                else if (trainings.Count == 0)
+                {
+                    <MudAlert Class="list-state" Severity="Severity.Info" Variant="Variant.Outlined">Ainda não há treinamentos cadastrados.</MudAlert>
+                }
+                else
+                {
+                    <MudList T="Training" Class="training-list" ReadOnly="true">
+                        @foreach (var training in trainings)
+                        {
+                            <MudListItem T="Training" Class="training-item">
+                                <MudText Typo="Typo.subtitle1">@training.Title</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@training.Description</MudText>
+                                <div class="training-meta">
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Icon="@Icons.Material.Outlined.Event">@training.StartDate.ToString("dd/MM/yyyy")</MudChip>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Icon="@Icons.Material.Outlined.Schedule">@training.DurationHours h</MudChip>
+                                </div>
+                                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Groups" Href="@($"/trainings/{training.Id}/attendees")">
+                                    Ver inscritos
+                                </MudButton>
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private readonly Dictionary<string, string> fieldErrors = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<Training> trainings = [];
+    private MudForm? form;
+    private string title = string.Empty;
+    private string description = string.Empty;
+    private DateTime? startDate;
+    private int durationHours;
+    private string? errorMessage;
+    private string? successMessage;
+    private bool isLoading = true;
+    private bool isSubmitting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTrainingsAsync();
+    }
+
+    private async Task LoadTrainingsAsync()
+    {
+        isLoading = true;
+        try
+        {
+            var response = await Http.GetFromJsonAsync<Training[]>("api/trainings");
+            trainings.Clear();
+            trainings.AddRange(response ?? []);
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Não foi possível carregar os treinamentos. Tente novamente.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (isSubmitting)
+        {
+            return;
+        }
+
+        if (form is not null)
+        {
+            await form.ValidateAsync();
+            if (!form.IsValid)
+            {
+                return;
+            }
+        }
+
+        isSubmitting = true;
+        errorMessage = null;
+        successMessage = null;
+        fieldErrors.Clear();
+
+        try
+        {
+            var request = new CreateTrainingRequest(
+                title,
+                description,
+                startDate?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+                durationHours);
+            using var response = await Http.PostAsJsonAsync("api/trainings", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = "Treinamento cadastrado com sucesso.";
+                await LoadTrainingsAsync();
+                ClearForm();
+                return;
+            }
+
+            await ReadErrorAsync(response);
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Não foi possível enviar o cadastro. Verifique a conexão e tente novamente.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task ReadErrorAsync(HttpResponseMessage response)
+    {
+        var messages = new List<string>();
+
+        try
+        {
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            if (document.RootElement.TryGetProperty("errors", out var errors))
+            {
+                foreach (var error in errors.EnumerateObject())
+                {
+                    var fieldMessages = error.Value
+                        .EnumerateArray()
+                        .Select(item => item.GetString())
+                        .Where(message => !string.IsNullOrWhiteSpace(message))
+                        .ToArray();
+
+                    if (fieldMessages.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    var fieldMessage = string.Join(" ", fieldMessages);
+                    fieldErrors[error.Name] = fieldMessage;
+                    messages.Add(fieldMessage);
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Usa a mensagem genérica quando a resposta não segue o contrato esperado.
+        }
+
+        errorMessage = messages.Count > 0
+            ? string.Join(" ", messages.Distinct())
+            : "Não foi possível cadastrar o treinamento. Tente novamente.";
+    }
+
+    private bool HasFieldError(string fieldName)
+    {
+        return fieldErrors.ContainsKey(fieldName);
+    }
+
+    private string? GetFieldError(string fieldName)
+    {
+        return fieldErrors.TryGetValue(fieldName, out var message) ? message : null;
+    }
+
+    private void ClearForm()
+    {
+        title = string.Empty;
+        description = string.Empty;
+        startDate = null;
+        durationHours = 0;
+    }
+}

@@ -1,0 +1,41 @@
+---
+name: review-ef-migration
+description: Revisa migrations do Entity Framework Core antes da aplicação. Use quando uma migration for criada ou alterada e precisar ser comparada com as entidades, configurações e regras de persistência.
+---
+
+# Revisar migrations do Entity Framework Core
+
+Revise a migration antes de recomendar sua aplicação.
+
+## Contexto mínimo
+
+Inspecione em conjunto:
+
+- os métodos `Up` e `Down` da migration;
+- o model snapshot correspondente;
+- as entidades e configurações do EF Core afetadas;
+- a especificação ou regra de negócio relacionada à alteração.
+
+Se algum desses artefatos estiver ausente, sinalize a limitação da revisão. Não suponha que uma migration segura em um banco vazio também seja segura sobre dados existentes.
+
+## Verificações obrigatórias
+
+1. Compare entidade, configuração, snapshot e esquema gerado.
+2. Identifique operações destrutivas ou com risco de perda de dados, incluindo exclusão, renomeação ou recriação de tabelas e colunas.
+3. Revise nulabilidade, valores padrão, tipos, limites, chaves, índices e restrições.
+4. Verifique se `Down` reverte coerentemente as operações de `Up`.
+5. Considere limitações do provedor configurado, especialmente quando uma alteração exigir recriação de tabela no SQLite.
+6. Diferencie problemas confirmados de riscos que dependem do estado real do banco ou de validação em execução.
+
+## Formato da resposta
+
+Apresente os achados por severidade. Para cada achado:
+
+- cite o arquivo e a operação relevante;
+- explique a evidência;
+- descreva o impacto possível;
+- recomende a menor ação de validação ou correção.
+
+Se não encontrar problemas, declare isso sem afirmar que a migration é isenta de riscos. Informe quais verificações ainda dependem de aplicar a migration em um banco descartável com estado conhecido.
+
+Não aplique a migration e não altere arquivos durante a revisão.
