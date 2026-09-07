@@ -1,11 +1,11 @@
 {
-  "name": "02-lab",
+  "name": "03-demo-sdlc",
   "image": "mcr.microsoft.com/devcontainers/dotnet:1-10.0",
   "postCreateCommand": "sudo grep -rlZ 'dl.yarnpkg.com' /etc/apt/sources.list.d | sudo xargs -0 -r rm -f && sudo apt-get update && sudo apt-get install -y sqlite3 && dotnet --info && sqlite3 --version",
   "forwardPorts": [5075],
   "portsAttributes": {
     "5075": {
-      "label": "Modulo 01 app",
+      "label": "Catálogo de treinamentos",
       "onAutoForward": "openPreview"
     }
   },
